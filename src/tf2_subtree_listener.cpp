@@ -16,8 +16,9 @@ TransformSubtreeListener::TransformSubtreeListener(
     const ros::NodeHandle &nh, bool spinThread, ros::Duration maxServerWait) :
     buffer(buffer), nh(nh)
 {
-  ros::ServiceClient client = this->nh.serviceClient<tf2_server::RequestTransformStream>(
-      "tf2_server/request_transform_stream");
+  ros::NodeHandle serverNh(this->nh, "tf2_server");
+  ros::ServiceClient client = serverNh.serviceClient<tf2_server::RequestTransformStream>(
+      "request_transform_stream");
 
   ROS_INFO_NAMED("tf2_subtree_listener", "Waiting for service %s", this->nh.resolveName(client.getService()).c_str());
   const auto serverExists = client.waitForExistence(maxServerWait);
