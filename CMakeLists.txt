@@ -9,6 +9,8 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_ros
 )
 
+catkin_python_setup()
+
 add_service_files(DIRECTORY srv)
 generate_messages()
 
@@ -37,6 +39,8 @@ if (${CATKIN_ENABLE_TESTING})
   find_package(rostest REQUIRED)
   add_rostest_gtest(test_tf2_subtree_listener test/tf2_subtree_listener.test test/test_tf2_subtree_listener.cpp)
   target_link_libraries(test_tf2_subtree_listener tf2_subtree_listener ${catkin_LIBRARIES})
+
+  add_rostest(test/tf2_subtree_listener_py.test)
 endif()
 
 install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node tf2_subtree_listener

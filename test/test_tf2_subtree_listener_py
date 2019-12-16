@@ -1,0 +1,140 @@
+#!/usr/bin/env python
+
+import unittest
+import rostest
+import rospy
+from tf2_ros import Buffer
+from tf2_server.tf2_subtree_listener import TransformSubtreeListener
+from tf2_server.srv import RequestTransformStreamRequest
+
+
+class TestTF2SubtreeListener(unittest.TestCase):
+    def test_basic(self):
+
+        req = RequestTransformStreamRequest()
+        req.parent_frame = "base_link"
+        req.child_frames = ["left_track", "front_left_flipper_endpoint"]
+        req.intermediate_frames = False
+        req.publisher_queue_size = 10
+        req.publication_period = rospy.Duration(0.1)
+
+        buffer = Buffer()
+        listener = TransformSubtreeListener(req, buffer, max_server_wait=rospy.Duration(10))
+
+        rospy.sleep(rospy.Duration(1))
+
+        self.assertFalse(buffer.can_transform("odom", "base_link", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "left_track", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "front_left_flipper", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "right_track", rospy.Time(0)))
+
+        self.assertTrue( buffer.can_transform("base_link", "left_track", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("base_link", "front_left_flipper", rospy.Time(0)))
+        self.assertTrue( buffer.can_transform("base_link", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("left_track", "front_left_flipper", rospy.Time(0)))
+        self.assertTrue( buffer.can_transform("left_track", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("front_left_flipper", "front_left_flipper_endpoint", rospy.Time(0)))
+
+        self.assertFalse(buffer.can_transform("base_link", "right_track", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("base_link", "front_right_flipper", rospy.Time(0)))
+
+    def test_publication_period(self):
+
+        req = RequestTransformStreamRequest()
+        req.parent_frame = "base_link"
+        req.child_frames = ["left_track", "front_left_flipper_endpoint"]
+        req.intermediate_frames = False
+        req.publisher_queue_size = 10
+        req.publication_period = rospy.Duration(10)
+
+        buffer = Buffer()
+        listener = TransformSubtreeListener(req, buffer, max_server_wait=rospy.Duration(10))
+
+        rospy.sleep(rospy.Duration(1))
+
+        self.assertFalse(buffer.can_transform("odom", "base_link", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "left_track", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "front_left_flipper", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "right_track", rospy.Time(0)))
+
+        self.assertFalse(buffer.can_transform("base_link", "left_track", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("base_link", "front_left_flipper", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("base_link", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("left_track", "front_left_flipper", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("left_track", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("front_left_flipper", "front_left_flipper_endpoint", rospy.Time(0)))
+
+        self.assertFalse(buffer.can_transform("base_link", "right_track", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("base_link", "front_right_flipper", rospy.Time(0)))
+
+    def test_intermediate_frames(self):
+
+        req = RequestTransformStreamRequest()
+        req.parent_frame = "base_link"
+        req.child_frames = ["left_track", "front_left_flipper_endpoint"]
+        req.intermediate_frames = True
+        req.publisher_queue_size = 10
+        req.publication_period = rospy.Duration(0.1)
+
+        buffer = Buffer()
+        listener = TransformSubtreeListener(req, buffer, max_server_wait=rospy.Duration(10))
+
+        rospy.sleep(rospy.Duration(1))
+
+        self.assertFalse(buffer.can_transform("odom", "base_link", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "left_track", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "front_left_flipper", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "right_track", rospy.Time(0)))
+
+        self.assertTrue(buffer.can_transform("base_link", "left_track", rospy.Time(0)))
+        self.assertTrue(buffer.can_transform("base_link", "front_left_flipper", rospy.Time(0)))
+        self.assertTrue(buffer.can_transform("base_link", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertTrue(buffer.can_transform("left_track", "front_left_flipper", rospy.Time(0)))
+        self.assertTrue(buffer.can_transform("left_track", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertTrue(buffer.can_transform("front_left_flipper", "front_left_flipper_endpoint", rospy.Time(0)))
+
+        self.assertFalse(buffer.can_transform("base_link", "right_track", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("base_link", "front_right_flipper", rospy.Time(0)))
+
+    def test_subtree(self):
+
+        req = RequestTransformStreamRequest()
+        req.parent_frame = "base_link"
+        req.child_frames = []
+        req.intermediate_frames = True
+        req.publisher_queue_size = 10
+        req.publication_period = rospy.Duration(0.1)
+
+        buffer = Buffer()
+        listener = TransformSubtreeListener(req, buffer, max_server_wait=rospy.Duration(10))
+
+        rospy.sleep(rospy.Duration(1))
+
+        self.assertFalse(buffer.can_transform("odom", "base_link", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "left_track", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "front_left_flipper", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "right_track", rospy.Time(0)))
+
+        self.assertTrue(buffer.can_transform("base_link", "left_track", rospy.Time(0)))
+        self.assertTrue(buffer.can_transform("base_link", "front_left_flipper", rospy.Time(0)))
+        self.assertTrue(buffer.can_transform("base_link", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertTrue(buffer.can_transform("left_track", "front_left_flipper", rospy.Time(0)))
+        self.assertTrue(buffer.can_transform("left_track", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertTrue(buffer.can_transform("front_left_flipper", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertTrue(buffer.can_transform("base_link", "rear_left_flipper", rospy.Time(0)))
+        self.assertTrue(buffer.can_transform("base_link", "rear_left_flipper_endpoint", rospy.Time(0)))
+        self.assertTrue(buffer.can_transform("left_track", "rear_left_flipper", rospy.Time(0)))
+        self.assertTrue(buffer.can_transform("left_track", "rear_left_flipper_endpoint", rospy.Time(0)))
+        self.assertTrue(buffer.can_transform("rear_left_flipper", "rear_left_flipper_endpoint", rospy.Time(0)))
+
+        self.assertTrue(buffer.can_transform("base_link", "right_track", rospy.Time(0)))
+        self.assertTrue(buffer.can_transform("base_link", "front_right_flipper", rospy.Time(0)))
+
+
+if __name__ == '__main__':
+    rospy.init_node("test_tf2_subtree_listener_py")
+    rostest.run("tf2_server", "test_tf2_subtree_listener_py", TestTF2SubtreeListener)
