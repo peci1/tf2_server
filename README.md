@@ -33,33 +33,37 @@ objects. The meaning of the individual fields is as follows:
 
 ### tf2_server.launch
 
-    <launch>
-        <param name="buffer_size" value="30.0"/>
-        <param name="publish_frame_service" value="true"/>
-        <param name="use_node_namespace" value="true"/>
-        <node name="tf_server" pkg="tf2_server" type="tf2_server_node"/>
-    </launch>
+```XML
+<launch>
+    <param name="buffer_size" value="30.0"/>
+    <param name="publish_frame_service" value="true"/>
+    <param name="use_node_namespace" value="true"/>
+    <node name="tf_server" pkg="tf2_server" type="tf2_server_node"/>
+</launch>
+```
     
 ### C++ client
 
 This C++ client code shows how to subscribe the whole TF subtree under the
 `base_link` frame. The transforms in the buffer get updated once every 0.1 s.
 
-    #include <tf2_server/tf2_subtree_listener.h>
+```C++
+#include <tf2_server/tf2_subtree_listener.h>
 
-    RequestTransformStreamRequest req;
-    req.parent_frame = "base_link";
-    req.child_frames = { };
-    req.intermediate_frames = true;
-    req.publisher_queue_size = 10;
-    req.publication_period = ros::Duration(0.1);
-    
-    tf2_ros::Buffer buffer;
-    TransformSubtreeListener listener(req, buffer, false, ros::Duration(10));
-    
-    ...
-    
-    buffer.canTransform("base_link", "left_track", ros::Time(0));
+RequestTransformStreamRequest req;
+req.parent_frame = "base_link";
+req.child_frames = { };
+req.intermediate_frames = true;
+req.publisher_queue_size = 10;
+req.publication_period = ros::Duration(0.1);
+
+tf2_ros::Buffer buffer;
+TransformSubtreeListener listener(req, buffer, false, ros::Duration(10));
+
+...
+
+buffer.canTransform("base_link", "left_track", ros::Time(0));
+```
     
 ### Python client
 
@@ -67,19 +71,21 @@ This Python client example shows how to subscribe exactly two transforms:
 `base_link`->`left_track` and `base_link`->`front_left_flipper_endpoint`.
 No other transforms are transmitted to the client.
 
-    req = RequestTransformStreamRequest()
-    req.parent_frame = "base_link"
-    req.child_frames = ["left_track", "front_left_flipper_endpoint"]
-    req.intermediate_frames = False
-    req.publisher_queue_size = 10
-    req.publication_period = rospy.Duration(0.1)
-    
-    buffer = Buffer()
-    listener = TransformSubtreeListener(req, buffer, max_server_wait=rospy.Duration(10))
-    
-    ...
-    
-    buffer.can_transform("base_link", "left_track", rospy.Time(0))
+```Python
+req = RequestTransformStreamRequest()
+req.parent_frame = "base_link"
+req.child_frames = ["left_track", "front_left_flipper_endpoint"]
+req.intermediate_frames = False
+req.publisher_queue_size = 10
+req.publication_period = rospy.Duration(0.1)
+
+buffer = Buffer()
+listener = TransformSubtreeListener(req, buffer, max_server_wait=rospy.Duration(10))
+
+...
+
+buffer.can_transform("base_link", "left_track", rospy.Time(0))
+```
     
 ## Principle of working of the subtree listener/publisher
 
