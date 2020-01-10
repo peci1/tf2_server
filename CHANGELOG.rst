@@ -2,8 +2,8 @@
 Changelog for package tf2_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.0.2 (2020-01-10)
+------------------
 * Added url tags to package.xml
 * Contributors: Martin Pecka
 
