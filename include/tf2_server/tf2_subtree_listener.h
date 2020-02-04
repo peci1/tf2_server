@@ -13,10 +13,13 @@ class TransformSubtreeListener
 {
   public: TransformSubtreeListener(const tf2_server::RequestTransformStreamRequest& subtree, tf2::BufferCore &buffer, bool spinThread = true, ros::Duration maxServerWait = ros::Duration(-1));
   public: TransformSubtreeListener(const tf2_server::RequestTransformStreamRequest& subtree, tf2::BufferCore &buffer, const ros::NodeHandle &nh, bool spinThread = true, ros::Duration maxServerWait = ros::Duration(-1));
+  public: void updateSubtree(const tf2_server::RequestTransformStreamRequest& subtree);
 
   protected: std::unique_ptr<tf2_ros::TransformListener> listener;
+  protected: ros::ServiceClient requestTransformStream;
   protected: tf2::BufferCore& buffer;
   protected: ros::NodeHandle nh;
+  protected: bool spinThread;
 };
 
 }

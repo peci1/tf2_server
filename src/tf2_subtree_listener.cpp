@@ -14,22 +14,27 @@ TransformSubtreeListener::TransformSubtreeListener(
 TransformSubtreeListener::TransformSubtreeListener(
     const tf2_server::RequestTransformStreamRequest& subtree, tf2::BufferCore &buffer,
     const ros::NodeHandle &nh, bool spinThread, ros::Duration maxServerWait) :
-    buffer(buffer), nh(nh)
+    buffer(buffer), nh(nh), spinThread(spinThread)
 {
   ros::NodeHandle serverNh(this->nh, "tf2_server");
-  ros::ServiceClient client = serverNh.serviceClient<tf2_server::RequestTransformStream>(
+  this->requestTransformStream = serverNh.serviceClient<tf2_server::RequestTransformStream>(
       "request_transform_stream");
 
-  ROS_INFO_NAMED("tf2_subtree_listener", "Waiting for service %s", this->nh.resolveName(client.getService()).c_str());
-  const auto serverExists = client.waitForExistence(maxServerWait);
+  ROS_INFO_NAMED("tf2_subtree_listener", "Waiting for service %s", this->nh.resolveName(this->requestTransformStream.getService()).c_str());
+  const auto serverExists = this->requestTransformStream.waitForExistence(maxServerWait);
   if (!serverExists)
-    throw tf2::ConnectivityException("Service " + this->nh.resolveName(client.getService()) + " is not available.");
-  ROS_INFO_NAMED("tf2_subtree_listener", "Service %s is available now", this->nh.resolveName(client.getService()).c_str());
+    throw tf2::ConnectivityException("Service " + this->nh.resolveName(this->requestTransformStream.getService()) + " is not available.");
+  ROS_INFO_NAMED("tf2_subtree_listener", "Service %s is available now", this->nh.resolveName(this->requestTransformStream.getService()).c_str());
 
+  this->updateSubtree(subtree);
+}
+
+void TransformSubtreeListener::updateSubtree(const RequestTransformStreamRequest &subtree)
+{
   tf2_server::RequestTransformStreamResponse topics;
 
   ROS_INFO_NAMED("tf2_subtree_listener", "Requesting topic names for transform subtree");
-  const auto succeeded = client.call(subtree, topics);
+  const auto succeeded = this->requestTransformStream.call(subtree, topics);
   if (!succeeded)
     throw tf2::ConnectivityException("Could not determine transform subtree topics.");
 
@@ -40,9 +45,10 @@ TransformSubtreeListener::TransformSubtreeListener(
 
   ros::NodeHandle remappedNh(this->nh, std::string(), remap);
 
-  this->listener = std::make_unique<tf2_ros::TransformListener>(this->buffer, remappedNh, spinThread);
+  this->listener = std::make_unique<tf2_ros::TransformListener>(this->buffer, remappedNh, this->spinThread);
 
   ROS_INFO_NAMED("tf2_subtree_listener", "Created transform subtree listener with /tf:=%s and /tf_static:=%s",
-      this->nh.resolveName(topics.topic_name).c_str(), this->nh.resolveName(topics.static_topic_name).c_str());
+                 this->nh.resolveName(topics.topic_name).c_str(), this->nh.resolveName(topics.static_topic_name).c_str());
 }
+
 }
