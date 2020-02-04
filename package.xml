@@ -15,6 +15,7 @@
 
   <buildtool_depend>catkin</buildtool_depend>
   <depend>geometry_msgs</depend>
+  <depend>nodelet</depend>
   <depend>roscpp</depend>
   <depend>tf2_msgs</depend>
   <depend>tf2_ros</depend>
@@ -28,4 +29,8 @@
   <test_depend>gtest</test_depend>
   <test_depend>rostest</test_depend>
   <test_depend>tf</test_depend>
+
+  <export>
+    <nodelet plugin="${prefix}/tf2_server_plugins.xml" />
+  </export>
 </package>

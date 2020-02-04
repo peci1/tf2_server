@@ -4,6 +4,7 @@ project(tf2_server)
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   message_generation
+  nodelet
   roscpp
   tf2_msgs
   tf2_ros
@@ -17,7 +18,7 @@ generate_messages()
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME} tf2_subtree_listener
-  CATKIN_DEPENDS geometry_msgs message_runtime roscpp tf2_msgs tf2_ros
+  CATKIN_DEPENDS geometry_msgs message_runtime nodelet roscpp tf2_msgs tf2_ros
 )
 
 include_directories(include)
@@ -26,6 +27,10 @@ include_directories(SYSTEM ${catkin_INCLUDE_DIRS})
 add_library(${PROJECT_NAME} src/tf2_server.cpp)
 add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
+
+add_library(${PROJECT_NAME}_nodelet src/tf2_server_nodelet.cpp)
+add_dependencies(${PROJECT_NAME}_nodelet ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_nodelet ${PROJECT_NAME} ${catkin_LIBRARIES})
 
 add_executable(${PROJECT_NAME}_node src/tf2_server_node.cpp)
 add_dependencies(${PROJECT_NAME}_node ${PROJECT_NAME})
@@ -43,7 +48,7 @@ if (${CATKIN_ENABLE_TESTING})
   add_rostest(test/tf2_subtree_listener_py.test)
 endif()
 
-install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node tf2_subtree_listener
+install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_nodelet ${PROJECT_NAME}_node tf2_subtree_listener
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

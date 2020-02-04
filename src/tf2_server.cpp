@@ -57,6 +57,8 @@ void TF2Server::start()
 {
   this->server->start();
   this->started = true;
+
+  ROS_INFO("TF2 server started.");
 }
 
 bool operator==(const tf2_msgs::TFMessage& lhs, const tf2_msgs::TFMessage& rhs)
