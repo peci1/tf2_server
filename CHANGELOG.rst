@@ -2,8 +2,8 @@
 Changelog for package tf2_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.0.4 (2020-02-04)
+------------------
 * Added a parameter that can help distinguishing between the original and the upgraded TF2 server.
 * Added support for running the server as nodelet.
 * Added support for updating the requested subtree during runtime.
