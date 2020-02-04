@@ -44,6 +44,8 @@ TF2Server::TF2Server(ros::NodeHandle& nh, ros::NodeHandle& pnh) : nh(nh), pnh(pn
     node_name = "tf2_buffer_server";
   }
 
+  this->pnh.setParam("supports_transform_streams", true);
+
   this->buffer =
       std::make_unique<tf2_ros::Buffer>(ros::Duration(buffer_size), publish_frame_service);
   this->listener = std::make_unique<tf2_ros::TransformListener>(*buffer, this->nh);
