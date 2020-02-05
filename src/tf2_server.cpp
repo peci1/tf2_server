@@ -46,6 +46,10 @@ TF2Server::TF2Server(ros::NodeHandle& nh, ros::NodeHandle& pnh) : nh(nh), pnh(pn
 
   this->pnh.setParam("supports_transform_streams", true);
 
+  double duration;
+  this->pnh.param("initial_streams_wait_time", duration, 1.0);
+  this->initialStreamsWaitTime = ros::Duration(duration);
+
   this->buffer =
       std::make_unique<tf2_ros::Buffer>(ros::Duration(buffer_size), publish_frame_service);
   this->listener = std::make_unique<tf2_ros::TransformListener>(*buffer, this->nh);
@@ -53,6 +57,64 @@ TF2Server::TF2Server(ros::NodeHandle& nh, ros::NodeHandle& pnh) : nh(nh), pnh(pn
 
   this->requestTransformStreamServer =
       pnh.advertiseService("request_transform_stream", &TF2Server::onRequestTransformStream, this);
+
+  if (this->pnh.hasParam("streams"))
+  {
+    XmlRpc::XmlRpcValue initialStreamsParam;
+    this->pnh.getParam("streams", initialStreamsParam);
+    if (initialStreamsParam.getType() != XmlRpc::XmlRpcValue::TypeStruct)
+    {
+      ROS_ERROR("Parameter streams has to be a dictionary");
+      return;
+    }
+
+    for (const auto initialStream : initialStreamsParam)
+    {
+      const std::string streamName = initialStream.first;
+
+      if (initialStream.second.getType() != XmlRpc::XmlRpcValue::TypeStruct)
+      {
+        ROS_ERROR("The definition of stream %s has to be a dictionary", streamName.c_str());
+        continue;
+      }
+
+      auto streamDef = initialStream.second;
+      RequestTransformStreamRequest req;
+      req.requested_topic_name = streamName;
+      req.publisher_queue_size = 10;
+
+      if (streamDef.hasMember("parent_frame"))
+        req.parent_frame = static_cast<std::string>(streamDef["parent_frame"]);
+      if (streamDef.hasMember("intermediate_frames"))
+        req.intermediate_frames = static_cast<bool>(streamDef["intermediate_frames"]);
+      if (streamDef.hasMember("publication_period"))
+      {
+        double period;
+        if (streamDef["publication_period"].getType() == XmlRpc::XmlRpcValue::TypeInt)
+          period = static_cast<int>(streamDef["publication_period"]);
+        else if (streamDef["publication_period"].getType() == XmlRpc::XmlRpcValue::TypeDouble)
+          period = static_cast<double>(streamDef["publication_period"]);
+        req.publication_period = ros::Duration(period);
+      }
+      if (streamDef.hasMember("publisher_queue_size"))
+        req.publisher_queue_size = static_cast<int>(streamDef["publisher_queue_size"]);
+      if (streamDef.hasMember("child_frames"))
+      {
+        if (streamDef["child_frames"].getType() != XmlRpc::XmlRpcValue::TypeArray)
+        {
+          ROS_ERROR("child_frames of stream %s have to be an array", streamName.c_str());
+          continue;
+        }
+
+        for (size_t i = 0; i < streamDef["child_frames"].size(); ++i)
+        {
+          req.child_frames.push_back(streamDef["child_frames"][i]);
+        }
+      }
+
+      this->initialStreams.push_back(req);
+    }
+  }
 }
 
 void TF2Server::start()
@@ -61,6 +123,12 @@ void TF2Server::start()
   this->started = true;
 
   ROS_INFO("TF2 server started.");
+
+  if (this->initialStreams.size() > 0)
+  {
+    this->initialStreamsTimer = this->pnh.createTimer(
+      this->initialStreamsWaitTime, std::bind(&TF2Server::registerInitialStreams, this), true, true);
+  }
 }
 
 bool operator==(const tf2_msgs::TFMessage& lhs, const tf2_msgs::TFMessage& rhs)
@@ -405,6 +473,26 @@ void TF2Server::onSubscriberDisconnected(const TopicsSpec& topics)
   {
     ROS_INFO("Stopped streaming %s, %s", topics.first.c_str(), topics.second.c_str());
     this->timers[topics].stop();
+  }
+}
+
+void TF2Server::registerInitialStreams()
+{
+  for (auto& req : this->initialStreams)
+  {
+    try
+    {
+      RequestTransformStreamResponse resp;
+      const auto succeeded = this->onRequestTransformStream(req, resp);
+      if (succeeded)
+        ROS_INFO("Stream %s, %s ready", resp.topic_name.c_str(), resp.static_topic_name.c_str());
+      else
+        ROS_ERROR("There was an error setting up transform stream %s", req.requested_topic_name.c_str());
+    }
+    catch (std::runtime_error &e)
+    {
+      ROS_ERROR("There was an error setting up transform stream %s: %s", req.requested_topic_name.c_str(), e.what());
+    }
   }
 }
 

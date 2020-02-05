@@ -46,6 +46,7 @@ if (${CATKIN_ENABLE_TESTING})
   target_link_libraries(test_tf2_subtree_listener tf2_subtree_listener ${catkin_LIBRARIES})
 
   add_rostest(test/tf2_subtree_listener_py.test)
+  add_rostest(test/tf2_server_initial_params.test)
 endif()
 
 install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_nodelet ${PROJECT_NAME}_node tf2_subtree_listener

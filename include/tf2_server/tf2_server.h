@@ -57,11 +57,17 @@ class TF2Server
   protected: std::map<TopicsSpec, size_t> subscriberNumbers;
   protected: std::map<TopicsSpec, RequestTransformStreamRequest> streams;
 
+  protected: std::vector<RequestTransformStreamRequest> initialStreams;
+  protected: ros::Duration initialStreamsWaitTime;
+  protected: ros::Timer initialStreamsTimer;
+
   protected: bool started = false;
 
   public: explicit TF2Server(ros::NodeHandle& nh, ros::NodeHandle& pnh);
 
   public: virtual void start();
+
+  protected: void registerInitialStreams();
 
   protected: virtual bool onRequestTransformStream(RequestTransformStreamRequest& req, RequestTransformStreamResponse& resp);
 

@@ -28,7 +28,27 @@ objects. The meaning of the individual fields is as follows:
  and all `child_frames`.
  - `duration` `publication_period`: How often to publish the transforms.
  - `int32` `publisher_queue_size`: Queue size of the transform publisher.
+ - `string` `requested_topic_name`: If nonempty, the stream will be published on
+   the given topic. Leads to an error if another stream is only registered on
+   this topic with incompatible settings.
+ - `string` `requested_static_topic_name`: If nonempty, specifies the name of
+   the stream with static transforms. Defaults to `$(requested_topic_name)/static`.
+ - `double` `initial_streams_wait_time`: Specifies how long to wait before 
+   registering streams from parameter `streams` (in seconds).
+ - `dict` `streams`: If nonempty, specifies some streams that should be registered
+   right after starting the server. Each stream has a name (its key in this dict).
+   The stream will be published at `tf2_server/stream_key` and 
+   `tf2_server/stream_key/static`. The structure is the following:
 
+
+    streams:
+      body:
+        parent_frame: 'base_link'
+        child_frames: []
+        intermediate_frames: True
+        publication_period: 0.1
+        publisher_queue_size: 11
+ 
 ## Example usage
 
 ### tf2_server.launch
