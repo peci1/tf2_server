@@ -1,11 +1,13 @@
 import rospy
+from rospy import TransportException
 from tf2_msgs.msg import TFMessage
-from tf2_ros import TransformListener, ConnectivityException, Buffer
+from tf2_ros import TransformListener, InvalidArgumentException, TimeoutException, Buffer
 from tf2_server.srv import RequestTransformStream, RequestTransformStreamRequest, RequestTransformStreamResponse
 
 
 class TransformSubtreeListener(TransformListener):
-    def __init__(self, subtree, buffer, queue_size=None, buff_size=65536, tcp_nodelay=False, max_server_wait=rospy.Duration(-1)):
+    def __init__(self, subtree, buffer, queue_size=None, buff_size=65536, tcp_nodelay=False,
+                 max_server_wait=rospy.Duration(-1), server_name="tf2_server"):
         assert isinstance(subtree, RequestTransformStreamRequest)
         assert isinstance(buffer, Buffer)
 
@@ -14,14 +16,14 @@ class TransformSubtreeListener(TransformListener):
         self._buff_size = buff_size
         self._tcp_nodelay = tcp_nodelay
 
-        service_name = rospy.resolve_name("~request_transform_stream", rospy.resolve_name("tf2_server"))
+        service_name = rospy.resolve_name("~request_transform_stream", rospy.resolve_name(server_name))
         self._requestTransformStream = rospy.ServiceProxy(service_name, RequestTransformStream)
         rospy.loginfo("Waiting for service " + service_name, logger_name="tf2_subtree_listener")
 
         try:
             self._requestTransformStream.wait_for_service(max_server_wait.to_sec())
         except rospy.ROSException, e:
-            raise ConnectivityException(str(e))
+            raise TimeoutException(str(e))
 
         rospy.loginfo("Service " + service_name + " is available now", logger_name="tf2_subtree_listener")
 
@@ -33,7 +35,7 @@ class TransformSubtreeListener(TransformListener):
             topics = self._requestTransformStream.call(subtree)
             assert isinstance(topics, RequestTransformStreamResponse)
         except rospy.ServiceException, e:
-            raise ConnectivityException(str(e))
+            raise InvalidArgumentException(str(e))
 
         TransformListener.__init__(self, self._buffer, self._queue_size, self._buff_size, self._tcp_nodelay)
 

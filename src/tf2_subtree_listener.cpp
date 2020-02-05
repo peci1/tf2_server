@@ -23,7 +23,7 @@ TransformSubtreeListener::TransformSubtreeListener(
   ROS_INFO_NAMED("tf2_subtree_listener", "Waiting for service %s", this->nh.resolveName(this->requestTransformStream.getService()).c_str());
   const auto serverExists = this->requestTransformStream.waitForExistence(maxServerWait);
   if (!serverExists)
-    throw tf2::ConnectivityException("Service " + this->nh.resolveName(this->requestTransformStream.getService()) + " is not available.");
+    throw tf2::TimeoutException("Service " + this->nh.resolveName(this->requestTransformStream.getService()) + " is not available.");
   ROS_INFO_NAMED("tf2_subtree_listener", "Service %s is available now", this->nh.resolveName(this->requestTransformStream.getService()).c_str());
 
   this->updateSubtree(subtree);
@@ -36,7 +36,7 @@ void TransformSubtreeListener::updateSubtree(const RequestTransformStreamRequest
   ROS_INFO_NAMED("tf2_subtree_listener", "Requesting topic names for transform subtree");
   const auto succeeded = this->requestTransformStream.call(subtree, topics);
   if (!succeeded)
-    throw tf2::ConnectivityException("Could not determine transform subtree topics.");
+    throw tf2::InvalidArgumentException("Could not determine transform subtree topics.");
 
   const ros::M_string remap = {
       {"/tf", topics.topic_name},

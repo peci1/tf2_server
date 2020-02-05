@@ -14,10 +14,20 @@
 namespace tf2_server
 {
 
-struct RequestTransformStreamRequestComparator
+struct RequestComparatorByFrames
 {
   bool operator()(const tf2_server::RequestTransformStreamRequest& r1,
                   const tf2_server::RequestTransformStreamRequest& r2) const;
+  bool equals(const tf2_server::RequestTransformStreamRequest& r1,
+              const tf2_server::RequestTransformStreamRequest& r2) const;
+};
+
+struct RequestComparator
+{
+  bool operator()(const tf2_server::RequestTransformStreamRequest& r1,
+                  const tf2_server::RequestTransformStreamRequest& r2) const;
+  bool equals(const tf2_server::RequestTransformStreamRequest& r1,
+              const tf2_server::RequestTransformStreamRequest& r2) const;
 };
 
 class TF2Server
@@ -34,15 +44,18 @@ class TF2Server
   protected: ros::ServiceServer requestTransformStreamServer;
 
   protected: std::unordered_set<std::string> topicNames;
-  protected: std::map<RequestTransformStreamRequest, ros::Timer, RequestTransformStreamRequestComparator> timers;
-  protected: std::map<RequestTransformStreamRequest, ros::Publisher, RequestTransformStreamRequestComparator> publishers;
-  protected: std::map<RequestTransformStreamRequest, ros::Publisher, RequestTransformStreamRequestComparator> staticPublishers;
-  protected: std::map<RequestTransformStreamRequest, tf2_msgs::TFMessage, RequestTransformStreamRequestComparator> lastStaticTransforms;
+  protected: std::map<std::string, ros::Publisher> publishers;
+  protected: std::map<std::string, ros::Publisher> staticPublishers;
+  protected: std::map<std::string, tf2_msgs::TFMessage> lastStaticTransforms;
 
-  typedef std::pair<std::string, std::string> FrameSpec;
-  typedef std::vector<FrameSpec> FramesList;
-  protected: std::map<RequestTransformStreamRequest, std::unique_ptr<FramesList>, RequestTransformStreamRequestComparator> frames;
-  protected: std::map<RequestTransformStreamRequest, size_t, RequestTransformStreamRequestComparator> subscriberNumbers;
+  protected: typedef std::pair<std::string, std::string> FrameSpec;
+  protected: typedef std::vector<FrameSpec> FramesList;
+  protected: std::map<RequestTransformStreamRequest, std::unique_ptr<FramesList>, RequestComparatorByFrames> frames;
+
+  protected: typedef std::pair<std::string, std::string> TopicsSpec;
+  protected: std::map<TopicsSpec, ros::Timer> timers;
+  protected: std::map<TopicsSpec, size_t> subscriberNumbers;
+  protected: std::map<TopicsSpec, RequestTransformStreamRequest> streams;
 
   protected: bool started = false;
 
@@ -52,15 +65,14 @@ class TF2Server
 
   protected: virtual bool onRequestTransformStream(RequestTransformStreamRequest& req, RequestTransformStreamResponse& resp);
 
-  protected: virtual void streamTransform(const ros::TimerEvent& event, const RequestTransformStreamRequest& request);
+  protected: virtual void streamTransform(const ros::TimerEvent& event, const RequestTransformStreamRequest& request, const TopicsSpec& topics);
 
   protected: virtual std::unique_ptr<FramesList> getFramesList(const RequestTransformStreamRequest& req) const;
 
-  protected: virtual std::string getTopicName(const RequestTransformStreamRequest& request);
-  protected: virtual std::string getStaticTopicName(const RequestTransformStreamRequest& request);
+  protected: virtual TopicsSpec getTopicsNames(const RequestTransformStreamRequest& request);
 
-  protected: virtual void onSubscriberConnected(const RequestTransformStreamRequest& request);
-  protected: virtual void onSubscriberDisconnected(const RequestTransformStreamRequest& request);
+  protected: virtual void onSubscriberConnected(const TopicsSpec& topics);
+  protected: virtual void onSubscriberDisconnected(const TopicsSpec& topics);
 
 };
 
