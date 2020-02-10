@@ -37,7 +37,7 @@ TF2Server::TF2Server(ros::NodeHandle& nh, ros::NodeHandle& pnh) : nh(nh), pnh(pn
   std::string node_name;
   if (use_node_namespace)
   {
-    node_name = ros::this_node::getName();
+    node_name = this->pnh.getNamespace();
   }
   else
   {
