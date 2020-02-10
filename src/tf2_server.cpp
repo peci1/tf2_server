@@ -50,6 +50,9 @@ TF2Server::TF2Server(ros::NodeHandle& nh, ros::NodeHandle& pnh) : nh(nh), pnh(pn
   this->pnh.param("initial_streams_wait_time", duration, 1.0);
   this->initialStreamsWaitTime = ros::Duration(duration);
 
+  this->pnh.param("transforms_update_period", duration, 1.0);
+  this->transformsUpdatePeriod = ros::Duration(duration);
+
   this->buffer =
       std::make_unique<tf2_ros::Buffer>(ros::Duration(buffer_size), publish_frame_service);
   this->listener = std::make_unique<tf2_ros::TransformListener>(*buffer, this->nh);
@@ -57,6 +60,8 @@ TF2Server::TF2Server(ros::NodeHandle& nh, ros::NodeHandle& pnh) : nh(nh), pnh(pn
 
   this->requestTransformStreamServer =
       pnh.advertiseService("request_transform_stream", &TF2Server::onRequestTransformStream, this);
+
+  this->buffer->_addTransformsChangedListener(boost::bind(&TF2Server::updateFramesLists, this));
 
   if (this->pnh.hasParam("streams"))
   {
@@ -98,6 +103,8 @@ TF2Server::TF2Server(ros::NodeHandle& nh, ros::NodeHandle& pnh) : nh(nh), pnh(pn
       }
       if (streamDef.hasMember("publisher_queue_size"))
         req.publisher_queue_size = static_cast<int>(streamDef["publisher_queue_size"]);
+      if (streamDef.hasMember("allow_transforms_update"))
+        req.allow_transforms_update = static_cast<bool>(streamDef["allow_transforms_update"]);
       if (streamDef.hasMember("child_frames"))
       {
         if (streamDef["child_frames"].getType() != XmlRpc::XmlRpcValue::TypeArray)
@@ -121,6 +128,7 @@ void TF2Server::start()
 {
   this->server->start();
   this->started = true;
+  this->lastTransformsUpdateTime = ros::Time::now();
 
   ROS_INFO("TF2 server started.");
 
@@ -179,7 +187,7 @@ bool TF2Server::onRequestTransformStream(RequestTransformStreamRequest &req,
   if (this->frames.find(req) == this->frames.end())
   {
     auto framesList = this->getFramesList(req);
-    if (framesList->empty())
+    if (framesList->empty() && !req.allow_transforms_update)
       throw std::runtime_error("Could not find any child frames of frame " + req.parent_frame);
 
     this->frames[req] = std::move(framesList);
@@ -217,6 +225,9 @@ void TF2Server::streamTransform(const ros::TimerEvent &,
                                 const TopicsSpec& topics)
 {
   std::lock_guard<std::mutex> lock(this->mutex);
+
+  if (this->frames[request]->empty())
+    return;
 
   const ros::Duration timeout(request.publication_period.toSec() * 0.9 / this->frames[request]->size());
   tf2_msgs::TFMessage msg;
@@ -367,10 +378,17 @@ TF2Server::TopicsSpec TF2Server::getTopicsNames(const RequestTransformStreamRequ
 
 std::unique_ptr<TF2Server::FramesList> TF2Server::getFramesList(const RequestTransformStreamRequest &req) const
 {
-  if (!this->buffer->_frameExists(req.parent_frame))
-    throw tf2::LookupException("Frame " + req.parent_frame + " doesn't exist.");
-
   auto result = std::make_unique<TF2Server::FramesList>();
+
+  // if parent frame doesn't exist, we either wait for it (if it's allowed), or fail immediately
+  if (!this->buffer->_frameExists(req.parent_frame))
+  {
+    if (!req.allow_transforms_update)
+      throw tf2::LookupException("Frame " + req.parent_frame + " doesn't exist.");
+    else
+      return result;
+  }
+
   if (!req.intermediate_frames)
   { // if intermediate frames are not requested, we just publish pairs of parent and all children
     result->reserve(req.child_frames.size());
@@ -378,7 +396,8 @@ std::unique_ptr<TF2Server::FramesList> TF2Server::getFramesList(const RequestTra
     {
       if (!this->buffer->_frameExists(child))
       {
-        ROS_WARN("Frame %s doesn't exist, it won't be streamed.", child.c_str());
+        if (!req.allow_transforms_update)
+          ROS_WARN("Frame %s doesn't exist, it won't be streamed.", child.c_str());
         continue;
       }
       result->emplace_back(req.parent_frame, child);
@@ -395,7 +414,8 @@ std::unique_ptr<TF2Server::FramesList> TF2Server::getFramesList(const RequestTra
       {
         if (!this->buffer->_frameExists(child))
         {
-          ROS_WARN("Frame %s doesn't exist, it won't be streamed.", child.c_str());
+          if (!req.allow_transforms_update)
+            ROS_WARN("Frame %s doesn't exist, it won't be streamed.", child.c_str());
           continue;
         }
         childFrames.push_back(child);
@@ -453,6 +473,28 @@ std::unique_ptr<TF2Server::FramesList> TF2Server::getFramesList(const RequestTra
   return result;
 }
 
+void TF2Server::updateFramesLists()
+{
+  // check update frequency
+  if ((ros::Time::now() - this->lastTransformsUpdateTime) < this->transformsUpdatePeriod)
+    return;
+  this->lastTransformsUpdateTime = ros::Time::now();
+
+  {
+    std::lock_guard<std::mutex> lock(this->mutex);
+
+    // update all frames that allow it
+    for (auto &frame : this->frames)
+    {
+      const auto &req = frame.first;
+      if (req.allow_transforms_update)
+      {
+        this->frames[req] = std::move(this->getFramesList(req));
+      }
+    }
+  }
+}
+
 void TF2Server::onSubscriberConnected(const TopicsSpec& topics)
 {
   std::lock_guard<std::mutex> lock(this->mutex);
@@ -502,6 +544,8 @@ bool RequestComparatorByFrames::operator()(
 {
   if (r1.intermediate_frames != r2.intermediate_frames)
     return r1.intermediate_frames < r2.intermediate_frames;
+  else if (r1.allow_transforms_update != r2.allow_transforms_update)
+    return r1.allow_transforms_update < r2.allow_transforms_update;
   else if (r1.parent_frame != r2.parent_frame)
     return r1.parent_frame < r2.parent_frame;
   else if (r1.child_frames.size() != r2.child_frames.size())
@@ -530,6 +574,8 @@ bool RequestComparator::operator()(
 {
   if (r1.intermediate_frames != r2.intermediate_frames)
     return r1.intermediate_frames < r2.intermediate_frames;
+  else if (r1.allow_transforms_update != r2.allow_transforms_update)
+    return r1.allow_transforms_update < r2.allow_transforms_update;
   else if (r1.publication_period != r2.publication_period)
     return r1.publication_period < r2.publication_period;
   else if (r1.publisher_queue_size != r2.publisher_queue_size)

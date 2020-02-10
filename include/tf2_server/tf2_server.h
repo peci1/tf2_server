@@ -61,6 +61,9 @@ class TF2Server
   protected: ros::Duration initialStreamsWaitTime;
   protected: ros::Timer initialStreamsTimer;
 
+  protected: ros::Time lastTransformsUpdateTime;
+  protected: ros::Duration transformsUpdatePeriod;
+
   protected: bool started = false;
 
   public: explicit TF2Server(ros::NodeHandle& nh, ros::NodeHandle& pnh);
@@ -76,6 +79,8 @@ class TF2Server
   protected: virtual std::unique_ptr<FramesList> getFramesList(const RequestTransformStreamRequest& req) const;
 
   protected: virtual TopicsSpec getTopicsNames(const RequestTransformStreamRequest& request);
+
+  protected: virtual void updateFramesLists();
 
   protected: virtual void onSubscriberConnected(const TopicsSpec& topics);
   protected: virtual void onSubscriberDisconnected(const TopicsSpec& topics);

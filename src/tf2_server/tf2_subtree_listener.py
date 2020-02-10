@@ -11,10 +11,13 @@ class TransformSubtreeListener(TransformListener):
         assert isinstance(subtree, RequestTransformStreamRequest)
         assert isinstance(buffer, Buffer)
 
-        self._buffer = buffer
+        TransformListener.__init__(self, buffer, queue_size, buff_size, tcp_nodelay)
+        self.unregister()  # immediately cancel subscription to /tf and /tf_static
+
         self._queue_size = queue_size
         self._buff_size = buff_size
         self._tcp_nodelay = tcp_nodelay
+        self._topics = None
 
         service_name = rospy.resolve_name("~request_transform_stream", rospy.resolve_name(server_name))
         self._requestTransformStream = rospy.ServiceProxy(service_name, RequestTransformStream)
@@ -29,6 +32,12 @@ class TransformSubtreeListener(TransformListener):
 
         self.update_subtree(subtree)
 
+    def unregister(self):
+        if self.tf_sub is not None and self.tf_static_sub is not None:
+            TransformListener.unregister(self)
+            self.tf_sub = None
+            self.tf_static_sub = None
+
     def update_subtree(self, subtree):
         rospy.loginfo("Requesting topic names for transform subtree", logger_name="tf2_subtree_listener")
         try:
@@ -37,17 +46,18 @@ class TransformSubtreeListener(TransformListener):
         except rospy.ServiceException, e:
             raise InvalidArgumentException(str(e))
 
-        TransformListener.__init__(self, self._buffer, self._queue_size, self._buff_size, self._tcp_nodelay)
+        if self._topics is None or topics != self._topics:
+            self._topics = topics
+            self.unregister()
 
-        self.unregister()
-        self._buffer.clear()
+            self.buffer.clear()
 
-        self.tf_sub = rospy.Subscriber(
-            topics.topic_name, TFMessage, self.callback, queue_size=self._queue_size,
-            buff_size=self._buff_size, tcp_nodelay=self._tcp_nodelay)
-        self.tf_static_sub = rospy.Subscriber(
-            topics.static_topic_name, TFMessage, self.static_callback, queue_size=self._queue_size,
-            buff_size=self._buff_size, tcp_nodelay=self._tcp_nodelay)
+            self.tf_sub = rospy.Subscriber(
+                topics.topic_name, TFMessage, self.callback, queue_size=self._queue_size,
+                buff_size=self._buff_size, tcp_nodelay=self._tcp_nodelay)
+            self.tf_static_sub = rospy.Subscriber(
+                topics.static_topic_name, TFMessage, self.static_callback, queue_size=self._queue_size,
+                buff_size=self._buff_size, tcp_nodelay=self._tcp_nodelay)
 
-        rospy.loginfo("Created transform subtree listener with /tf:=%s and /tf_static:=%s" % (
-            topics.topic_name, topics.static_topic_name), logger_name="tf2_subtree_listener")
+            rospy.loginfo("Created transform subtree listener with /tf:=%s and /tf_static:=%s" % (
+                topics.topic_name, topics.static_topic_name), logger_name="tf2_subtree_listener")

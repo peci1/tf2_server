@@ -17,7 +17,12 @@
                 intermediate_frames: True
                 publication_period: 0.1
                 publisher_queue_size: 11
-
+              update:
+                parent_frame: 'map'
+                child_frames: []
+                intermediate_frames: True
+                publication_period: 0.1
+                allow_transforms_update: True
         </rosparam>
     </node>
 
@@ -33,5 +38,12 @@
         <remap from="/tf" to="/tf2_buffer_server/body" />
         <remap from="/tf_static" to="/tf2_buffer_server/body/static" />
         <param name="test_type" value="body" />
+    </test>
+
+    <!-- For the update test, we need to access the original tf topics to be able to publish to
+         them... so we do the remapping manually in the test code. -->
+    <test test-name="test_tf2_server_initial_params_update" pkg="tf2_server" type="test_tf2_server_initial_params">
+        <remap from="tf2_server" to="tf2_buffer_server" />
+        <param name="test_type" value="update" />
     </test>
 </launch>
