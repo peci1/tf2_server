@@ -2,8 +2,8 @@
 Changelog for package tf2_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.0.5 (2020-02-09)
+------------------
 * Added support for streams whose TF tree can be updated during runtime.
 * Added support for initial streams.
 * Added possibility to specify desired names of the published transform streams.
