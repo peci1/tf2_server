@@ -440,6 +440,11 @@ std::unique_ptr<TF2Server::FramesList> TF2Server::getFramesList(const RequestTra
         {
           this->buffer->_chainAsVector(frame, ros::Time(0), req.parent_frame, ros::Time(0), req.parent_frame, chainFrames);
         }
+        catch (tf2::ExtrapolationException& e)
+        {
+          // the frame is stale, ignore it
+          continue;
+        }
         catch (tf2::TransformException& e)
         {
           ROS_ERROR("Error while searching TF tree: %s", e.what());
