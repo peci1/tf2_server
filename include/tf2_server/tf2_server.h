@@ -40,6 +40,8 @@ class TF2Server
   protected: std::unique_ptr<tf2_ros::BufferServer> server;
   protected: std::unique_ptr<tf2_ros::TransformListener> listener;
   protected: std::mutex mutex;
+  protected: std::mutex subscriberMutex;
+  protected: std::mutex streamsMutex;
 
   protected: ros::ServiceServer requestTransformStreamServer;
 

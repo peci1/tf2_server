@@ -172,17 +172,21 @@ bool operator!=(const tf2_msgs::TFMessage& lhs, const tf2_msgs::TFMessage& rhs)
 bool TF2Server::onRequestTransformStream(RequestTransformStreamRequest &req,
                                          RequestTransformStreamResponse &resp)
 {
-  std::lock_guard<std::mutex> lock(this->mutex);
+  TopicsSpec topics;
+  {
+    std::lock_guard<std::mutex> streamsLock(this->streamsMutex);
 
-  const auto topics = this->getTopicsNames(req);
+    topics = this->getTopicsNames(req);
+    if (topics.first.empty() || topics.second.empty())
+      return false;
+
+    this->streams[topics] = req;
+  }
 
   const auto topicName = resp.topic_name = topics.first;
   const auto staticTopicName = resp.static_topic_name = topics.second;
 
-  if (topicName.empty() || staticTopicName.empty())
-    return false;
-
-  this->streams[topics] = req;
+  std::lock_guard<std::mutex> lock(this->mutex);
 
   if (this->frames.find(req) == this->frames.end())
   {
@@ -502,7 +506,7 @@ void TF2Server::updateFramesLists()
 
 void TF2Server::onSubscriberConnected(const TopicsSpec& topics)
 {
-  std::lock_guard<std::mutex> lock(this->mutex);
+  std::lock_guard<std::mutex> lock(this->subscriberMutex);
 
   this->subscriberNumbers[topics] = this->subscriberNumbers[topics] + 1;
   if (this->subscriberNumbers[topics] == 1)
@@ -513,7 +517,7 @@ void TF2Server::onSubscriberConnected(const TopicsSpec& topics)
 
 void TF2Server::onSubscriberDisconnected(const TopicsSpec& topics)
 {
-  std::lock_guard<std::mutex> lock(this->mutex);
+  std::lock_guard<std::mutex> lock(this->subscriberMutex);
 
   this->subscriberNumbers[topics] = this->subscriberNumbers[topics] - 1;
   if (this->subscriberNumbers[topics] == 0)
