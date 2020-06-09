@@ -2,8 +2,8 @@
 Changelog for package tf2_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.0.6 (2020-06-09)
+------------------
 * Minor: catkin_lint.
 * Fix: prevent deadlocks on stopping timers.
 * Fix: Ignore stale frames in subtree search.
