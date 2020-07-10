@@ -67,6 +67,7 @@ class TF2Server
   protected: ros::Duration transformsUpdatePeriod;
 
   protected: bool started = false;
+  protected: bool initialStreamsRegistered = false;
 
   public: explicit TF2Server(ros::NodeHandle& nh, ros::NodeHandle& pnh);
 

@@ -132,10 +132,12 @@ void TF2Server::start()
 
   ROS_INFO("TF2 server started.");
 
-  if (this->initialStreams.size() > 0)
+  if (!this->initialStreams.empty())
   {
     this->initialStreamsTimer = this->pnh.createTimer(
       this->initialStreamsWaitTime, std::bind(&TF2Server::registerInitialStreams, this), true, true);
+  } else {
+    this->initialStreamsRegistered = true;
   }
 }
 
@@ -511,10 +513,12 @@ void TF2Server::onSubscriberConnected(const TopicsSpec& topics)
   std::lock_guard<std::mutex> lock(this->subscriberMutex);
 
   this->subscriberNumbers[topics] = this->subscriberNumbers[topics] + 1;
-  if (this->subscriberNumbers[topics] == 1)
-    ROS_INFO("Started streaming %s, %s", topics.first.c_str(), topics.second.c_str());
 
-  this->timers[topics].start();
+  if (this->initialStreamsRegistered) {
+    if (this->subscriberNumbers[topics] == 1)
+      ROS_INFO("Started streaming %s, %s", topics.first.c_str(), topics.second.c_str());
+    this->timers[topics].start();
+  }
 }
 
 void TF2Server::onSubscriberDisconnected(const TopicsSpec& topics)
@@ -522,7 +526,7 @@ void TF2Server::onSubscriberDisconnected(const TopicsSpec& topics)
   std::lock_guard<std::mutex> lock(this->subscriberMutex);
 
   this->subscriberNumbers[topics] = this->subscriberNumbers[topics] - 1;
-  if (this->subscriberNumbers[topics] == 0)
+  if (this->initialStreamsRegistered && this->subscriberNumbers[topics] == 0)
   {
     ROS_INFO("Stopped streaming %s, %s", topics.first.c_str(), topics.second.c_str());
     this->timers[topics].stop();
@@ -537,9 +541,14 @@ void TF2Server::registerInitialStreams()
     {
       RequestTransformStreamResponse resp;
       const auto succeeded = this->onRequestTransformStream(req, resp);
-      if (succeeded)
+      if (succeeded) {
         ROS_INFO("Stream %s, %s ready", resp.topic_name.c_str(), resp.static_topic_name.c_str());
-      else
+        TopicsSpec topics(resp.topic_name, resp.static_topic_name);
+        if (this->subscriberNumbers[topics] != 0) {
+            ROS_INFO("Started streaming %s, %s", topics.first.c_str(), topics.second.c_str());
+            this->timers[topics].start();
+        }
+      } else
         ROS_ERROR("There was an error setting up transform stream %s", req.requested_topic_name.c_str());
     }
     catch (std::runtime_error &e)
@@ -547,6 +556,7 @@ void TF2Server::registerInitialStreams()
       ROS_ERROR("There was an error setting up transform stream %s: %s", req.requested_topic_name.c_str(), e.what());
     }
   }
+  this->initialStreamsRegistered = true;
 }
 
 bool RequestComparatorByFrames::operator()(
