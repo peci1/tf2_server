@@ -214,7 +214,9 @@ bool TF2Server::onRequestTransformStream(RequestTransformStreamRequest &req,
           ros::VoidConstPtr(), true);
   }
 
-  if (this->timers.find(topics) == this->timers.end())
+  const auto& timerIt = this->timers.find(topics);
+  // for some unknown reason, some timers aren't sometimes valid (their Impl is null, which should not happen at all)
+  if (timerIt == this->timers.end() || !(*timerIt).second.isValid())
   {
     this->timers[topics] = this->nh.createTimer(req.publication_period,
       std::bind(&TF2Server::streamTransform, this, std::placeholders::_1, req, topics),
