@@ -31,6 +31,7 @@
   <test_depend>tf</test_depend>
 
   <export>
-    <nodelet plugin="${prefix}/tf2_server_plugins.xml" />
+    <nodelet plugin="${prefix}/tf2_server_nodelets.xml" />
+    <nodelet plugin="${prefix}/tf2_server_test_nodelets.xml" />
   </export>
 </package>

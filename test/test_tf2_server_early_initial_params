@@ -1,0 +1,78 @@
+#!/usr/bin/env python
+
+import unittest
+import rostest
+import rospy
+import time
+from tf2_ros import Buffer, TransformListener
+
+
+class TestTF2EarlyInitialParams(unittest.TestCase):
+    """
+    See tf2_server_early_intial_params.test for description of this testcase.
+    """
+
+    def test_early(self):
+        buffer = Buffer()
+        listener = TransformListener(buffer)
+
+        # started right away, connecting takes time
+        self.assertEqual(listener.tf_sub.get_num_connections(), 0, "There should not be any publisher at this time")
+
+        # wait for possible connections
+        rospy.sleep(rospy.Duration(1))
+
+        # nope, the tf2_server should still be waiting its 5 seconds before startup
+        self.assertEqual(listener.tf_sub.get_num_connections(), 0, "There should not be any publisher at this time")
+
+        # as the tf2_server is not yet running, no transforms should be found
+        self.assertFalse(buffer.can_transform("odom", "base_link", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "left_track", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "front_left_flipper", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "right_track", rospy.Time(0)))
+
+        self.assertFalse(buffer.can_transform("base_link", "left_track", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("base_link", "front_left_flipper", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("base_link", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("left_track", "front_left_flipper", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("left_track", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("front_left_flipper", "front_left_flipper_endpoint", rospy.Time(0)))
+
+        self.assertFalse(buffer.can_transform("base_link", "right_track", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("base_link", "front_right_flipper", rospy.Time(0)))
+
+        # check if the tf2_server started up after its 5-second delay and it started publishing the TF stream
+        for i in range(7):
+            if rospy.is_shutdown() or listener.tf_sub.get_num_connections() > 0:
+                break
+            rospy.loginfo("Waiting for publisher to appear")
+            time.sleep(1)
+
+        # it should create the publisher
+        self.assertEqual(listener.tf_sub.get_num_connections(), 1, "There should be one publisher at this time")
+
+        # wait for buffer to fill up with the published transforms
+        time.sleep(1)
+
+        # the odom transform should be there (if the race condition is not fixed, this test would fail)
+        self.assertTrue( buffer.can_transform("odom", "base_link", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "left_track", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "front_left_flipper", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("odom", "right_track", rospy.Time(0)))
+
+        self.assertFalse(buffer.can_transform("base_link", "left_track", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("base_link", "front_left_flipper", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("base_link", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("left_track", "front_left_flipper", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("left_track", "front_left_flipper_endpoint", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("front_left_flipper", "front_left_flipper_endpoint", rospy.Time(0)))
+
+        self.assertFalse(buffer.can_transform("base_link", "right_track", rospy.Time(0)))
+        self.assertFalse(buffer.can_transform("base_link", "front_right_flipper", rospy.Time(0)))
+
+
+if __name__ == '__main__':
+    rospy.init_node("test_tf2_early_initial_params")
+    rostest.run("tf2_server", "test_tf2_early_initial_params", TestTF2EarlyInitialParams)

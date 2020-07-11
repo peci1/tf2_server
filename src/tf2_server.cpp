@@ -197,6 +197,14 @@ bool TF2Server::onRequestTransformStream(RequestTransformStreamRequest &req,
     this->frames[req] = std::move(framesList);
   }
 
+  // timer creation has to happen before subscribers
+  if (this->timers.find(topics) == this->timers.end())
+  {
+    this->timers[topics] = this->nh.createTimer(req.publication_period,
+      std::bind(&TF2Server::streamTransform, this, std::placeholders::_1, req, topics),
+      false, false);
+  }
+
   if (this->publishers.find(topicName) == this->publishers.end())
   {
     this->publishers[topicName] =
@@ -212,13 +220,6 @@ bool TF2Server::onRequestTransformStream(RequestTransformStreamRequest &req,
           std::bind(&TF2Server::onSubscriberConnected, this, topics),
           std::bind(&TF2Server::onSubscriberDisconnected, this, topics),
           ros::VoidConstPtr(), true);
-  }
-
-  if (this->timers.find(topics) == this->timers.end())
-  {
-    this->timers[topics] = this->nh.createTimer(req.publication_period,
-      std::bind(&TF2Server::streamTransform, this, std::placeholders::_1, req, topics),
-      false, false);
   }
 
   return true;

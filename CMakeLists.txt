@@ -45,8 +45,13 @@ if (${CATKIN_ENABLE_TESTING})
   add_rostest_gtest(test_tf2_subtree_listener test/tf2_subtree_listener.test test/test_tf2_subtree_listener.cpp)
   target_link_libraries(test_tf2_subtree_listener tf2_subtree_listener ${catkin_LIBRARIES})
 
+  add_library(${PROJECT_NAME}_early_initial_params_test_nodelet test/tf2_server_early_initial_params_nodelet.cpp)
+  add_dependencies(${PROJECT_NAME}_early_initial_params_test_nodelet ${catkin_EXPORTED_TARGETS})
+  target_link_libraries(${PROJECT_NAME}_early_initial_params_test_nodelet ${catkin_LIBRARIES})
+
   add_rostest(test/tf2_subtree_listener_py.test)
   add_rostest(test/tf2_server_initial_params.test)
+  add_rostest(test/tf2_server_early_initial_params.test)
 endif()
 
 install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_node ${PROJECT_NAME}_nodelet tf2_subtree_listener
@@ -60,6 +65,6 @@ install(DIRECTORY include/${PROJECT_NAME}/
   FILES_MATCHING PATTERN "*.h"
 )
 
-install(FILES tf2_server_plugins.xml
+install(FILES tf2_server_nodelets.xml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )

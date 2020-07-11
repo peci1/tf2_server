@@ -1,0 +1,36 @@
+<launch>
+    <!-- This tests a fixed race condition in tf2_server when used with initial streams. The problem was that it was
+     possible that the connect_cb of the stream would get called before the stream's timer is created, which would
+     result in invalid timer and the stream not being published until a second subscriber connects. This race condition
+     only manifested when the subscriber was in a nodelet running in the same nodelet manager as the tf2_server. -->
+
+    <param name="/use_sim_time" value="false" />
+
+    <include file="$(dirname)/tf_tree.launch" />
+
+    <node name="manager" pkg="nodelet" type="nodelet" args="manager" output="screen" />
+
+    <!-- Start the relay earlier than the tf2_server, so that it calls its connect_cb as soon as possible. -->
+    <node name="relay" pkg="nodelet" type="nodelet" args="load tf2_server_test/early_initial_params_nodelet manager" output="screen">
+        <remap from="/tf" to="/tf2_buffer_server/odom" />
+    </node>
+
+    <test test-name="test_tf2_server_early_initial_params" pkg="tf2_server" type="test_tf2_server_early_initial_params">
+        <remap from="tf2_server" to="tf2_buffer_server" />
+        <remap from="/tf" to="/test" />
+        <remap from="/tf_static" to="/tf2_buffer_server/odom/static" />
+    </test>
+
+    <node name="tf2_buffer_server" pkg="nodelet" type="nodelet" args="load tf2_server/nodelet manager" output="screen"
+        launch-prefix="bash -c 'sleep 5; $0 $@' ">
+        <param name="initial_streams_wait_time" value="1" />
+        <rosparam>
+            streams:
+              odom:
+                parent_frame: 'odom'
+                child_frames: [ 'base_link' ]
+                intermediate_frames: False
+                publication_period: 0.1
+        </rosparam>
+    </node>
+</launch>
