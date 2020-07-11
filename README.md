@@ -1,5 +1,7 @@
 # tf2_server
 
+![CI](https://github.com/peci1/tf2_server/workflows/CI/badge.svg)
+
 An upgraded [tf2_ros/buffer_server](https://github.com/ros/geometry2/blob/melodic-devel/tf2_ros/src/buffer_server.cpp).
 It supports the same API as the tf2_ros/buffer_server node. Moreover, it allows clients
 to request only subparts of the TF tree, which results in lowering the data transfer rates.
