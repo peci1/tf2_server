@@ -3,27 +3,49 @@
 ![CI](https://github.com/peci1/tf2_server/workflows/CI/badge.svg)
 
 An upgraded [tf2_ros/buffer_server](https://github.com/ros/geometry2/blob/melodic-devel/tf2_ros/src/buffer_server.cpp).
-It supports the same API as the tf2_ros/buffer_server node. Moreover, it allows clients
-to request only subparts of the TF tree, which results in lowering the data transfer rates.
-This mode is useful as a middle way between standard TransformListener and the 
-action interface of the buffer_server - it transmits only the requested transform(s),
-but isn't burdened with the overhead the action interface brings in.
+Main features are:
 
-This package also provides helper libraries for use in C++ and Python clients
-that make usage of this server easier.
+ - It supports the same action API as `tf2_ros/buffer_server` node for on-demand transform querying (which is however
+   not suitable for fast queries).
+ - It allows clients to request only subparts (or "streams") of the TF tree, which results in lowering the data
+   transfer rates and computational burden of TF clients.
+ - It provides C++ and Python helper libraries that make the subtree subscription easier. However, use of these
+   libraries is optional and client code can make full use of subscription to a TF subtree just by correct configuration
+   in `.launch` files.
+ - It can be used as a TF concentrator which reduces the usual M:N connection nature of the TF topic to a M:1 and 1:N.
 
-Apart from the helper libraries, the server publishes the so called "TF streams",
-which are internally utilized by the helper libraries, but can also be used by
-custom user code. The streams can either be requested dynamically by calling service
-`request_transform_stream` or by setting an initial set of streams using the `streams`
-parameter described in the following section.
+The subtree subscription mode is useful as a middle way between standard `TransformListener` and the action interface of
+the `buffer_server` - it transmits only the requested transform(s), but isn't burdened with the overhead the action
+interface brings in.
 
-## Available nodes and nodelets
+The server publishes the so called "TF streams", which are internally utilized by the helper libraries,
+but can also be used by custom user code. The streams can either be requested dynamically by calling service
+`~/request_transform_stream` or by setting an initial set of streams using the `streams` parameter described in the
+following section.
+
+## Nodes and nodelets
 
 This package provides node `tf2_server_node` and nodelet `tf2_server/nodelet` with
 equal functionality. Try running the nodelet version with your TF-hungry nodes.
 
-## tf2_server_node parameters
+## Actions
+
+ - [`tf2_msgs/LookupTransform`](http://docs.ros.org/api/tf2_msgs/html/action/LookupTransform.html): Depending on value
+   of parameter `~use_node_namespace`, this action is either published in namespace of the node, or in namespace
+   `tf2_buffer_server`.
+
+## Parameters
+
+The first 3 parameters are taken from the original TF2 buffer server. To stay compatible, the parameters are not
+node-private, but should be set "one level" higher, e.g. besides the node and not inside it.
+
+ - `double` `buffer_size`: Duration of the buffer memory (in seconds). Default is 120.0.
+ - `bool` `publish_frame_service`: If `True`, the server will enable service `~/tf2_frames` which shows debug information
+   about the contents of the buffer. Default is `False`.
+ - `bool` `use_node_namespace`: If `True`, the lookup transform action of this server will be published under the
+   namespace of this tf2_server. If `False`, the action server will be published in namespace `tf2_buffer_server`.
+   Default is `False`.
+
 
  - `double` `~transforms_update_period`: The period at which the server looks for
    newly added TF frames.
@@ -48,10 +70,12 @@ streams:
     allow_transforms_update: True
 ```
 
-## tf2_server_node services
+## Services
 
  - `tf2_server/RequestTransformStream` `~/request_transform_stream`: Requests a transform
    stream satisfying the given parameters.
+ - [`tf2_msgs/FrameGraph`](http://docs.ros.org/api/tf2_msgs/html/srv/FrameGraph.html) `~/tf2_frames`: Returns a list
+   of all available frames seen by the buffer server.
    
 ## tf2_server_node publications and subscriptions
 
@@ -154,10 +178,22 @@ listener = TransformSubtreeListener(req, buffer, max_server_wait=rospy.Duration(
 
 buffer.can_transform("base_link", "left_track", rospy.Time(0))
 ```
-    
+
+### Connect a node to an already existing transform stream
+
+```XML
+<launch>
+    <!-- This assumes you've already requested a TF subtree "odom", e.g. by putting it in the `streams` parameter. -->
+    <node name="my_node" pkg="any_pkg" type="node">
+        <remap from="/tf" to="tf2_server/streams/odom" />
+        <remap from="/tf_static" to="tf2_server/streams/odom/static" />
+    </node>
+</launch>
+```
+
 ## Principle of working of the subtree listener/publisher
 
-The TransformSubtreeListener classes hide some implementation details from the
+The `TransformSubtreeListener` classes hide some implementation details from the
 user. Here we describe what exactly happens when a subtree is requested.
 
 First, service `~/request_transform_stream` is called with the given
