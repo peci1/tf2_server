@@ -25,7 +25,7 @@ class TransformSubtreeListener(TransformListener):
 
         try:
             self._requestTransformStream.wait_for_service(max_server_wait.to_sec())
-        except rospy.ROSException, e:
+        except rospy.ROSException as e:
             raise TimeoutException(str(e))
 
         rospy.loginfo("Service " + service_name + " is available now", logger_name="tf2_subtree_listener")
@@ -43,7 +43,7 @@ class TransformSubtreeListener(TransformListener):
         try:
             topics = self._requestTransformStream.call(subtree)
             assert isinstance(topics, RequestTransformStreamResponse)
-        except rospy.ServiceException, e:
+        except rospy.ServiceException as e:
             raise InvalidArgumentException(str(e))
 
         if self._topics is None or topics != self._topics:
