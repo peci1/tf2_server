@@ -2,8 +2,8 @@
 Changelog for package tf2_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.1.1 (2022-06-08)
+------------------
 * Fixed Noetic CI
 * Disable Noetic CI
 * Contributors: Martin Pecka
