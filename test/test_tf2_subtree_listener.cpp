@@ -695,6 +695,9 @@ int main(int argc, char** argv){
   ros::AsyncSpinner spinner(1);
   spinner.start();
 
+  // Let the server buffer fill
+  ros::WallDuration(3).sleep();
+
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
