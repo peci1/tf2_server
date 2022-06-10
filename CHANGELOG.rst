@@ -2,8 +2,8 @@
 Changelog for package tf2_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.1.2 (2022-06-10)
+------------------
 * Try to de-flake test.
 * Contributors: Martin Pecka
 
