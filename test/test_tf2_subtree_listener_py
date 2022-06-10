@@ -681,5 +681,9 @@ class TestTF2SubtreeListener(unittest.TestCase):
 
 if __name__ == '__main__':
     rospy.init_node("test_tf2_subtree_listener_py")
+
+    # Let the server buffer fill
+    rospy.sleep(rospy.Duration(3))
+
     rostest.run("tf2_server", "test_tf2_subtree_listener_py", TestTF2SubtreeListener)
 
