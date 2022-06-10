@@ -2,6 +2,11 @@
 Changelog for package tf2_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Try to de-flake test.
+* Contributors: Martin Pecka
+
 1.1.1 (2022-06-08)
 ------------------
 * Fixed Noetic CI
