@@ -2,8 +2,8 @@
 Changelog for package tf2_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.1.3 (2024-01-10)
+------------------
 * Fixed errors printed by pluginlib when tf2_server is installed
 * Contributors: Martin Pecka
 
