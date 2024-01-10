@@ -1,3 +1,5 @@
+<class_libraries>
+	
 <library path="lib/libtf2_server_nodelet">
     <class name="tf2_server/nodelet"
            type="tf2_server::Tf2ServerNodelet"
@@ -7,3 +9,15 @@
         </description>
     </class>
 </library>
+
+<library path="lib/libtf2_server_early_initial_params_test_nodelet">
+    <class name="tf2_server_test/early_initial_params_nodelet"
+           type="tf2_server::Tf2ServerEarlyInitialParamsNodelet"
+           base_class_type="nodelet::Nodelet">
+        <description>
+            Nodelet for tf2_server tests. Do not use otherwise. The library is not installed.
+        </description>
+    </class>
+</library>
+
+</class_libraries>
