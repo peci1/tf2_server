@@ -2,6 +2,11 @@
 Changelog for package tf2_server
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fixed errors printed by pluginlib when tf2_server is installed
+* Contributors: Martin Pecka
+
 1.1.2 (2022-06-10)
 ------------------
 * Try to de-flake test.
